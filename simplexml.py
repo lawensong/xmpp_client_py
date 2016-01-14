@@ -8,7 +8,6 @@ class Node:
         self.attrs = attrs
         self.namespace = namespace
         self.kids = []
-        self.parent = None
         self.name = ""
 
         if tag:
@@ -25,21 +24,9 @@ class Node:
 
     def __str__(self):
         s = "<"+self.name
+
         if self.namespace:
-            if not self.parent or self.parent.namespace != self.namespace:
-                if "xmlns" not in self.attrs:
-                    s = s + " xmlns=%s" % self.namespace
-
-        for key in self.attrs:
-            s = s + " %s=%s" %(key, self.attrs[key])
-
-        if self.kids:
             pass
-
-        if not self.kids and s.endswith(">"):
-            s = s[:-1]+"/>"
-        else:
-            s = s + "<"+self.name+"/>"
 
         return s
 
