@@ -10,6 +10,10 @@ class Client:
         self.port = port
         self.namespace = "jabber:client"
 
+        self.user = ""
+        self.password = ""
+        self.resource = ""
+
     def connect(self):
         TcpSocket(self.server, self.port).Plugin(self)
         self.connected = "tcp"
@@ -27,5 +31,7 @@ class Client:
         if not self.Dispatcher.stream.features.get_tag("starttls"):
             return self.connected
 
-    def auth(self):
-        pass
+    def auth(self, user, password, resource=""):
+        self.user = user
+        self.password = password
+        self.resource = resource
