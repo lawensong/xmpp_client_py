@@ -3,6 +3,9 @@ __author__ = 'Administrator'
 from simplexml import Node
 
 
+NS_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl'                     # RFC 3920
+
+
 class Jid:
     def __init__(self):
         pass

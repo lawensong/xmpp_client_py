@@ -2,6 +2,7 @@ __author__ = 'Administrator'
 
 from transports import TcpSocket
 from dispatcher import Dispatcher
+from auth import SASL
 
 
 class Client:
@@ -35,3 +36,15 @@ class Client:
         self.user = user
         self.password = password
         self.resource = resource
+        SASL(user, password).Plugin(self)
+
+        if self.SASL.startsasl == "not-supported":
+            return
+
+        while self.SASL.startsasl == "in-process" and self.process(1):
+            pass
+
+        if self.SASL.startsasl == "success":
+            pass
+        else:
+            pass

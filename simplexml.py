@@ -48,7 +48,7 @@ class Node:
 
         return s
 
-    def get_tag(self, name):
+    def get_tag(self, name, namespace):
         return None
 
     def get_name(self):

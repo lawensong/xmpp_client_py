@@ -11,7 +11,7 @@ class Dispatcher(Plugin):
         super(Dispatcher, self).__init__()
         self.handlers = {}
 
-        self.export_method = [self.process]
+        self.export_method = [self.process, self.register_handler]
 
     def _init(self):
         self.register_namespace("unknown")
@@ -48,6 +48,27 @@ class Dispatcher(Plugin):
 
     def register_protocol(self, tag_name, protocol, xmlns):
         self.handlers[xmlns][tag_name] = {"type": protocol, "default": []}
+
+    def register_handler(self, name, handler, type='', ns='', xmlns='', first=0, system=0):
+        if not xmlns:
+            xmlns = self.owner.namespace
+
+        if not type and not ns:
+            type = "default"
+
+        if not self.handlers.has_key(xmlns):
+            self.register_namespace(xmlns)
+
+        if not self.handlers[xmlns].has_key(name):
+            self.register_protocol(name, Protocol, xmlns)
+
+        if not self.handlers[xmlns][name].has_key(type+ns):
+            self.handlers[xmlns][name][type+ns] = []
+
+        if first:
+            self.handlers[xmlns][name][type+ns].insert(0, {"func": handler, "system": system})
+        else:
+            self.handlers[xmlns][name][type+ns].append({"func": handler, "system": system})
 
     def process(self, timeout=0):
         if self.owner.connection.pending_data(timeout):
