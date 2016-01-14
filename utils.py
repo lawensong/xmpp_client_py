@@ -1,7 +1,7 @@
 __author__ = 'Administrator'
 
 
-class Plugin:
+class Plugin(object):
     def __init__(self):
         self.owner = None
         self.owner_old_method = []
@@ -16,7 +16,7 @@ class Plugin:
             owner.__dict__[method.__name__] = method
 
         owner.__dict__[self.__class__.__name__] = self
-        if self.__dict__.has_key("plugin"):
+        if self.__class__.__dict__.has_key("plugin"):
             self.plugin(owner)
 
     def Plugout(self):

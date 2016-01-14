@@ -26,8 +26,9 @@ class TcpSocket(Plugin):
     def get_port(self):
         return self.port
 
-    def plugin(self):
+    def plugin(self, owner):
         self.connect()
+        self.owner.connection = self
 
     def connect(self):
         try:
