@@ -68,6 +68,7 @@ class TcpSocket(Plugin):
 
     def send(self, raw_data):
         try:
+            print "--->>>", raw_data
             self._send(raw_data)
         except Exception as e:
             print e

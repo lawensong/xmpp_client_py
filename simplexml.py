@@ -2,29 +2,67 @@ __author__ = 'Administrator'
 import xml.parsers.expat
 
 
-class Node:
-    def __init__(self, tag, attrs={}, namespace=None, parent=None, node_built=False):
+class Node(object):
+    def __init__(self, tag, attrs={}, namespace=None, parent=None, node_built=False, payload=[], node=None):
         self.tag = tag
-        self.attrs = attrs
+        self.attrs = {}
         self.namespace = namespace
+        self.namespace_cache = {}
+        self.nsd = {}
         self.kids = []
         self.name = ""
         self.parent = parent
+        self.data = []
+
+        for attr, val in attrs.items():
+            if attr == "xmlns":
+                self.nsd[u''] = val
+            elif attr.startswith("xmlns:"):
+                self.nsd[attr[6:]] = val
+            self.attrs[attr] = val
+
+        if namespace:
+            for key in namespace.keys():
+                self.namespace_cache[key] = namespace[key]
 
         if tag:
             if node_built:
-                self.namespace, self.name = ([""] + tag.split(":"))[-2:]
+                pfx, self.name = ([""] + tag.split(":"))[-2:]
+                self.namespace = self.lookup_nsp(pfx)
             else:
                 if " " in tag:
                     self.namespace, self.name = tag.split()
                 else:
                     self.name = tag
 
+        if isinstance(payload, basestring):
+            payload = [payload]
+        for x in payload:
+            self.data.append(x)
+
+    def lookup_nsp(self, pfx=''):
+        ns = self.nsd.get(pfx, None)
+        if not ns:
+            ns = self.namespace_cache.get(pfx, None)
+        if not ns:
+            if self.parent:
+                ns = self.parent.lookup_nsp(pfx)
+                self.namespace_cache[pfx] = ns
+            else:
+                return 'http://www.gajim.org/xmlns/undeclared'
+        return ns
+
     def set_namespace(self, namespace):
         self.namespace = namespace
 
+    def get_namespace(self):
+        return self.namespace
+
     def set_attrs(self, key, val):
         self.attrs[key] = val
+
+    def get_attrs(self, key):
+        return self.attrs.get(key)
 
     def __str__(self):
         s = "<"+self.name
@@ -48,14 +86,102 @@ class Node:
 
         return s
 
-    def get_tag(self, name, namespace):
-        return None
+    def add_children(self, name=None, attrs={}, namespace=None, payload=[], node=None):
+        if node:
+            new_node = node
+            node.parent = self
+        else:
+            new_node = Node(name, attrs=attrs, payload=payload, parent=self)
+
+        if namespace:
+            new_node.set_namespace(namespace)
+
+        self.kids.append(new_node)
+        return new_node
+
+    def get_tag(self, name, attrs={}, namespace=None):
+        return self.get_tags(name, attrs, namespace, one=1)
+
+    def set_tag(self, name, attrs={}, namespace=None):
+        node = self.get_tag(name, attrs, namespace)
+        if node:
+            return node
+        else:
+            return self.add_children(name, attrs=attrs, namespace=namespace)
+
+    def get_tags(self, name, attrs={}, namespace=None, one=0):
+        nodes = []
+        for node in self.kids:
+            if not node:
+                continue
+            if namespace and namespace != node.get_namespace():
+                continue
+            if name == node.get_name():
+                for key in attrs.keys():
+                    if key not in node.attrs or node.attrs[key] != attrs[key]:
+                        break
+                nodes.append(node)
+                if one == 1:
+                    return nodes[0]
+        if not one:
+            return nodes
 
     def get_name(self):
         return self.name
 
+    def get_data(self):
+        return "".join(self.data)
 
-class NodeBuilt:
+    def get_children(self):
+        return self.kids
+
+    def get_tag_data(self, tag):
+        try:
+            self.get_tag(tag).get_data()
+        except Exception as e:
+            print e
+            return None
+
+    def set_tag_data(self, tag, val, attrs={}):
+        try:
+            self.get_tag(tag, attrs=attrs).set_data(val)
+        except Exception as e:
+            print e
+            self.add_children(tag, attrs, payload=[val])
+
+    def get_tag_attr(self, tag, attr):
+        return self.get_tag(tag).attrs[attr]
+
+    def set_tag_attr(self, tag, attr, val):
+        try:
+            self.get_tag(tag).attrs[attr] = val
+        except Exception as e:
+            print e
+            self.add_children(tag, attrs={attr: val})
+
+    def get_payload(self):
+        ret = []
+        for i in range(max(len(self.data), len(self.kids))):
+            if i< len(self.data):
+                ret.append(self.data)
+            if i< len(self.kids):
+                ret.append(self.kids)
+        return ret
+
+    def set_payload(self, payload, add=0):
+        if add:
+            self.kids = payload
+        else:
+            self.kids += payload
+
+    def __getitem__(self, item):
+        return self.get_attrs(item)
+
+    def __setitem__(self, key, val):
+        return self.set_attrs(key, val)
+
+
+class NodeBuilt(object):
     def __init__(self):
         self.parse = xml.parsers.expat.ParserCreate()
         self.parse.StartElementHandler = self.start_tag
@@ -72,8 +198,16 @@ class NodeBuilt:
 
         self.min_dom = None
         self._ptr = None
+        self.data_buffer = None
+
+    def check_data_buffer(self):
+        if self.data_buffer:
+            self._ptr.data.append(''.join(self.data_buffer))
+            del self.data_buffer[:]
+            self.data_buffer = None
 
     def start_tag(self, tag, attrs):
+        self.check_data_buffer()
         self.depth_inc()
 
         if self.__depth == 1:
@@ -101,10 +235,11 @@ class NodeBuilt:
             self.min_dom = Node(tag, attrs, self.document_nsp, node_built=True)
             self._ptr = self.min_dom
         elif self.__depth > self._dispatch_depth:
-            self._ptr.kids.append(Node(tag, attrs, parent=self._ptr))
+            self._ptr.kids.append(Node(tag, attrs, parent=self._ptr, node_built=True))
             self._ptr = self._ptr.kids[-1]
 
     def end_tag(self, tag):
+        self.check_data_buffer()
         if self.__depth == self._dispatch_depth:
             self.dispatcher(self.min_dom)
         elif self.__depth > self._dispatch_depth:
@@ -115,7 +250,10 @@ class NodeBuilt:
             self.stream_footer_received()
 
     def handle_cdata(self, data):
-        pass
+        if self.data_buffer:
+            self.data_buffer.append(data)
+        else:
+            self.data_buffer = [data]
 
     def handle_namespace_start(self):
         pass

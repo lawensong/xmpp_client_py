@@ -34,7 +34,6 @@ class Dispatcher(Plugin):
         self._metastream.set_attrs("to", "localhost")
         self._metastream.set_attrs("version", "1.0")
         self._metastream.set_attrs("xmlns:stream", "http://etherx.jabber.org/streams")
-        print "--->>><?xml version='1.0'?>%s>" % str(self._metastream)[:-2]
         self.owner.send("<?xml version='1.0'?>%s>" % str(self._metastream)[:-2])
 
     def plugin(self, owner):
@@ -79,11 +78,23 @@ class Dispatcher(Plugin):
                 return len(data)
         return None
 
-    def dispatcher(self, stanza):
-        if stanza.get_name() == "features":
+    def dispatcher(self, stanza, session=None):
+        if not session:
+            session = self
+        session.stream.min_dom = None
+        name = stanza.get_name()
+        if name == "features":
             self.stream.features = stanza
 
-        print "dispatcher", stanza
+        xmlns = stanza.get_namespace()
+
+        if not self.handlers.has_key(xmlns):
+            xmlns = "unknown"
+        if not self.handlers[xmlns].has_key(name):
+            name = "unknown"
+
+        if stanza.__class__.__name__ == "Node":
+            stanza = self.handlers[xmlns][name]["type"](node=stanza)
 
     def stream_header_received(self, nsp, name):
         if nsp != 'http://etherx.jabber.org/streams' or name != "stream":
