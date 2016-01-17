@@ -11,9 +11,9 @@ def send_xmpp(server, port, user, password, resource):
 
 
 if __name__ == "__main__":
-    server = "192.168.16.175"
+    server = "192.168.1.220"
     port = 5222
-    user = "sh"
+    user = "admin"
     password = "123456"
     resource = "py_client"
     send_xmpp(server, port, user, password, resource)

@@ -14,6 +14,19 @@ class Node(object):
         self.parent = parent
         self.data = []
 
+        if node:
+            self.name = node.name
+            self.namespace = node.namespace
+            self.parent = node.parent
+            for key in node.attrs.keys():
+                self.attrs[key] = node.attrs[key]
+            for data in node.data:
+                self.data.append(data)
+            for kid in node.kids:
+                self.kids.append(kid)
+            for key in node.nsd.keys():
+                self.nsd[key] = node.nsd[key]
+
         for attr, val in attrs.items():
             if attr == "xmlns":
                 self.nsd[u''] = val
@@ -37,6 +50,7 @@ class Node(object):
 
         if isinstance(payload, basestring):
             payload = [payload]
+
         for x in payload:
             self.data.append(x)
 
@@ -79,10 +93,14 @@ class Node(object):
         if self.kids:
             pass
 
+        if self.data:
+            for dd in self.data:
+                s = s + dd
+
         if s.endswith(">"):
             s = s[:-1]+"/>"
         else:
-            s = s + "<"+self.name+"/>"
+            s = s + "</"+self.name+">"
 
         return s
 

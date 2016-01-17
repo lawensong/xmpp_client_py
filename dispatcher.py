@@ -71,12 +71,16 @@ class Dispatcher(Plugin):
 
     def process(self, timeout=0):
         if self.owner.connection.pending_data(timeout):
-            data = self.owner.connection.receive()
+            try:
+                data = self.owner.connection.receive()
+            except Exception as e:
+                print e
+                return
             if data:
                 print "---<<<", data
                 self.stream.Parse(data)
                 return len(data)
-        return None
+        return '0'
 
     def dispatcher(self, stanza, session=None):
         if not session:
@@ -95,6 +99,34 @@ class Dispatcher(Plugin):
 
         if stanza.__class__.__name__ == "Node":
             stanza = self.handlers[xmlns][name]["type"](node=stanza)
+
+        typ = stanza.get_type()
+        if not typ:
+            typ = ""
+        stanza.pops = stanza.get_properties()
+
+        hlist = ["default"]
+        if self.handlers[xmlns][name].has_key(typ):
+            hlist.append(typ)
+        for p in stanza.pops:
+            if self.handlers[xmlns][name].has_key(p):
+                hlist.append(p)
+            if self.handlers[xmlns][name].has_key(typ+p):
+                hlist.append(typ+p)
+
+        chain = self.handlers[xmlns]['default']['default']
+        for key in hlist:
+            if key:
+                chain = chain + self.handlers[xmlns][name][key]
+
+        user = 1
+        for handler in chain:
+            if user or handler['system']:
+                try:
+                    handler['func'](session, stanza)
+                except Exception as e:
+                    print e
+                    user = 0
 
     def stream_header_received(self, nsp, name):
         if nsp != 'http://etherx.jabber.org/streams' or name != "stream":

@@ -27,7 +27,6 @@ class SASL(Plugin):
             print e
 
     def features_handler(self, dis, feature):
-        print feature.get_tag("mechanisms", namespace=NS_SASL)
         if not feature.get_tag("mechanisms", namespace=NS_SASL):
             self.startsasl = "not-supported"
             return
@@ -84,14 +83,14 @@ class SASL(Plugin):
                 res = {}
                 res['username'] = self.username
                 res['realm'] = self.owner.server
-                res['nonce'] = self.chal['nonce']
+                res['nonce'] = chal['nonce']
                 cnonce = ''
                 for i in range(7):
                     cnonce += hex(int(random.random()*65536*4096))[2:]
                 res['cnonce'] = cnonce
                 res['nc'] = ('00000001')
                 res['qop'] = 'auth'
-                res['digest-uri'] = 'xmpp/'+self.owner.server
+                res['digest-uri'] = 'xmpp/localhost'
                 A1 = C([H(C([res['username'], res['realm'], self.password])), res['nonce'], res['cnonce']])
                 A2 = C(['AUTHENTICATE', res['digest-uri']])
                 response = HH(C([HH(A1), res['nonce'], res['nc'], res['cnonce'], res['qop'], HH(A2)]))

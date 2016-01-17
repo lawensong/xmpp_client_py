@@ -45,6 +45,6 @@ class Client:
             pass
 
         if self.SASL.startsasl == "success":
-            pass
+            print "start to bind"
         else:
             pass
