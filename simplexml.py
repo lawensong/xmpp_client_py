@@ -52,7 +52,10 @@ class Node(object):
             payload = [payload]
 
         for x in payload:
-            self.data.append(x)
+            if isinstance(x, Node):
+                self.add_children(node = x)
+            else:
+                self.data.append(x)
 
     def lookup_nsp(self, pfx=''):
         ns = self.nsd.get(pfx, None)
@@ -72,6 +75,12 @@ class Node(object):
     def get_namespace(self):
         return self.namespace
 
+    def set_parent(self, parent):
+        self.parent = parent
+
+    def get_parent(self):
+        return self.parent
+
     def set_attrs(self, key, val):
         self.attrs[key] = val
 
@@ -87,17 +96,18 @@ class Node(object):
                     s = s + (" xmlns='%s'" % self.namespace)
 
         for x in self.attrs.keys():
-            s = s + (" %s='%s'" % (x, self.attrs[x]))
+            s = s + (" %s='%s'" % (x, str(self.attrs[x])))
         s = s+">"
 
         if self.kids:
-            pass
+            for a in self.kids:
+                s = s + str(a)
 
         if self.data:
             for dd in self.data:
                 s = s + dd
 
-        if s.endswith(">"):
+        if not self.kids and s.endswith(">"):
             s = s[:-1]+"/>"
         else:
             s = s + "</"+self.name+">"
@@ -155,7 +165,7 @@ class Node(object):
 
     def get_tag_data(self, tag):
         try:
-            self.get_tag(tag).get_data()
+            return self.get_tag(tag).get_data()
         except Exception as e:
             print e
             return None
@@ -275,6 +285,13 @@ class NodeBuilt(object):
 
     def handle_namespace_start(self):
         pass
+
+    def destroy(self):
+        self.check_data_buffer()
+        self.parse.StartElementHandler = None
+        self.parse.EndElementHandler = None
+        self.parse.CharacterDataHandler = None
+        self.parse.StartNamespaceDeclHandler = None
 
     def depth_inc(self):
         self.__depth = self.__depth + 1

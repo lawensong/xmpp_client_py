@@ -2,7 +2,7 @@ __author__ = 'Administrator'
 
 from transports import TcpSocket
 from dispatcher import Dispatcher
-from auth import SASL
+from auth import SASL, Bind
 
 
 class Client:
@@ -45,6 +45,17 @@ class Client:
             pass
 
         if self.SASL.startsasl == "success":
-            print "start to bind"
+            Bind().Plugin(self)
+            while self.Bind.bound is None and self.process(1):
+                pass
+
+            if self.Bind.bind(self.resource):
+                self.connected += 'sasl'
+                return 'sasl'
         else:
+            print 'SASL error'
+
+    def get_response(self):
+        print "start to get response"
+        while self.process(1):
             pass

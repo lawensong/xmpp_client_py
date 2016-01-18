@@ -5,6 +5,17 @@ from simplexml import Node
 
 NS_SASL = 'urn:ietf:params:xml:ns:xmpp-sasl'                     # RFC 3920
 NS_CLIENT = 'jabber:client'                                      # RFC 3921
+NS_STREAMS = 'http://etherx.jabber.org/streams'                  # RFC 3920
+NS_BIND = 'urn:ietf:params:xml:ns:xmpp-bind'                     # RFC 3920
+NS_SESSION ='urn:ietf:params:xml:ns:xmpp-session'                # RFC 3921
+
+
+def is_result_node(node):
+    return node and node.get_type() == "result"
+
+
+def is_error_node(node):
+    return node and node.get_type() == "error"
 
 
 class JID:
@@ -48,6 +59,14 @@ class JID:
 
     def set_resource(self, resource):
         self.resource = resource
+
+    def __str__(self):
+        jid = ""
+        if self.node:
+            jid = self.node + "@" + self.domain
+        if self.resource:
+            jid += "/" + self.resource
+        return jid
 
 
 class Protocol(Node):
@@ -139,7 +158,7 @@ class Iq(Protocol):
 
 
 class Message(Protocol):
-    def __init__(self, to=None, body=Node, subject=Node, frm=None, typ=None, attrs={}, payload=[], xmlns=NS_CLIENT, node=None):
+    def __init__(self, to=None, body=None, subject=None, frm=None, typ=None, attrs={}, payload=[], xmlns=NS_CLIENT, node=None):
         super(Message, self).__init__("message", to=to, tye=typ, frm=frm, attrs=attrs, payload=payload, xmlns=xmlns, node=node)
         if body:
             self.set_body(body)

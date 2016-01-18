@@ -2,16 +2,21 @@ __author__ = 'Administrator'
 
 
 import simplexml
+import time
 from utils import Plugin
 from protocol import Protocol, Iq, Presence, Message
+
+DefaultTimeout = 25
+ID = 0
 
 
 class Dispatcher(Plugin):
     def __init__(self):
         super(Dispatcher, self).__init__()
         self.handlers = {}
+        self._expected = {}
 
-        self.export_method = [self.process, self.register_handler]
+        self.export_method = [self.process, self.register_handler, self.send]
 
     def _init(self):
         self.register_namespace("unknown")
@@ -38,7 +43,21 @@ class Dispatcher(Plugin):
 
     def plugin(self, owner):
         self._init()
+        for method in self.owner_old_method:
+            if method.__name__ == "send":
+                self._owner_send = method
         self.stream_init()
+
+    def plugout(self):
+        self.stream.dispatcher = None
+        self.stream.features = None
+        self.stream.destroy()
+
+    def dump_handlers(self):
+        return self.handlers
+
+    def store_handlers(self, handlsers):
+        self.handlers = handlsers
 
     def register_namespace(self, xmlns):
         self.handlers[xmlns] = {}
@@ -82,6 +101,25 @@ class Dispatcher(Plugin):
                 return len(data)
         return '0'
 
+    def send(self, stanza):
+        if type(stanza) in [type(''), type(u'')]:
+            return self._owner_send(stanza)
+
+        if not isinstance(stanza, Protocol):
+            _id = None
+        elif not stanza.get_id():
+            global ID
+            ID += 1
+            _id =ID
+            stanza.set_id(_id)
+        else:
+            _id = stanza.get_id()
+
+        stanza.set_namespace(self.owner.namespace)
+        stanza.set_parent(self._metastream)
+        self._owner_send(stanza)
+        return _id
+
     def dispatcher(self, stanza, session=None):
         if not session:
             session = self
@@ -101,6 +139,9 @@ class Dispatcher(Plugin):
             stanza = self.handlers[xmlns][name]["type"](node=stanza)
 
         typ = stanza.get_type()
+        s_id = stanza.get_id()
+        if s_id:
+            s_id = int(s_id)
         if not typ:
             typ = ""
         stanza.pops = stanza.get_properties()
@@ -119,14 +160,38 @@ class Dispatcher(Plugin):
             if key:
                 chain = chain + self.handlers[xmlns][name][key]
 
-        user = 1
+        if session._expected.has_key(s_id):
+            user = 0
+            if type(session._expected[s_id]) == type(()):
+                pass
+            else:
+                session._expected[s_id] = stanza
+        else:
+            user = 1
+
         for handler in chain:
             if user or handler['system']:
                 try:
                     handler['func'](session, stanza)
                 except Exception as e:
-                    print e
+                    print "handler error", e
                     user = 0
+
+    def wait_for_response(self, s_id, timeout=DefaultTimeout):
+        self._expected[s_id] = None
+        abort_time = time.time() + timeout
+        while not self._expected[s_id]:
+            if not self.owner.process(0.04):
+                return None
+
+            if time.time() > abort_time:
+                return None
+        response = self._expected[s_id]
+        del self._expected[s_id]
+        return response
+
+    def send_and_wait_for_response(self, stanza, timeout=DefaultTimeout):
+        return self.wait_for_response(self.send(stanza), timeout)
 
     def stream_header_received(self, nsp, name):
         if nsp != 'http://etherx.jabber.org/streams' or name != "stream":

@@ -67,6 +67,10 @@ class TcpSocket(Plugin):
         return select.select([self.sock], [], [], timeout)[0]
 
     def send(self, raw_data):
+        if type(raw_data) == type(u''):
+            raw_data = raw_data.encode('utf-8')
+        elif type(raw_data) != type(''):
+            raw_data = str(raw_data).encode('utf-8')
         try:
             print "--->>>", raw_data
             self._send(raw_data)
