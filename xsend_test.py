@@ -1,15 +1,17 @@
 __author__ = 'Administrator'
+import threading
 
 from client import Client
 from protocol import Message
 
 
+CLIENT = None
 server = "192.168.16.175"
 port = 5222
-user = "admin"
+user = "shnanyang"
 password = "123456"
-resource = "py_client"
-tojid = "sh@localhost/test"
+resource = "py_client1"
+tojid = "admin@localhost/test"
 
 
 def message_test():
@@ -21,10 +23,29 @@ def send_xmpp():
     connect = client_xmpp.connect()
     print "connect is ", connect
     print client_xmpp.auth(user, password, resource)
-    print "bind finish"
-    client_xmpp.send(Message(tojid, "today is a good day"))
+    client_xmpp.register_h()
+    client_xmpp.register_message()
+    # client_xmpp.send(Message(tojid, "today is a good day"))
+    print "start to get response"
+    global CLIENT
+    CLIENT = client_xmpp
+    threading.Thread(target=xshell).start()
+    client_xmpp.get_response(client_xmpp.send, Message(tojid, "today is a good day"))
 
-    client_xmpp.get_response()
+
+def xshell():
+    while True:
+        xstr = raw_input('>>')
+        try:
+            print "input: ", xstr
+            if not xstr:
+                continue
+            elif xstr.strip() == "exit":
+                exit()
+            else:
+                CLIENT.send(Message(tojid, xstr))
+        except Exception as e:
+            print e
 
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ NS_CLIENT = 'jabber:client'                                      # RFC 3921
 NS_STREAMS = 'http://etherx.jabber.org/streams'                  # RFC 3920
 NS_BIND = 'urn:ietf:params:xml:ns:xmpp-bind'                     # RFC 3920
 NS_SESSION ='urn:ietf:params:xml:ns:xmpp-session'                # RFC 3921
+NS_SESSION_TWO = 'urn:xmpp:sm:2'
 
 
 def is_result_node(node):

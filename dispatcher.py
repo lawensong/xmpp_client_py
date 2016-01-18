@@ -99,6 +99,7 @@ class Dispatcher(Plugin):
                 print "---<<<", data
                 self.stream.Parse(data)
                 return len(data)
+
         return '0'
 
     def send(self, stanza):
@@ -140,8 +141,12 @@ class Dispatcher(Plugin):
 
         typ = stanza.get_type()
         s_id = stanza.get_id()
-        if s_id:
+        if isinstance(s_id, int):
             s_id = int(s_id)
+        else:
+            global ID
+            s_id = ID
+
         if not typ:
             typ = ""
         stanza.pops = stanza.get_properties()

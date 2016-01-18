@@ -167,14 +167,12 @@ class Node(object):
         try:
             return self.get_tag(tag).get_data()
         except Exception as e:
-            print e
             return None
 
     def set_tag_data(self, tag, val, attrs={}):
         try:
             self.get_tag(tag, attrs=attrs).set_data(val)
         except Exception as e:
-            print e
             self.add_children(tag, attrs, payload=[val])
 
     def get_tag_attr(self, tag, attr):

@@ -8,7 +8,7 @@ def H(some): return md5.new(some).digest()
 def C(some): return ':'.join(some)
 
 from utils import Plugin
-from protocol import NS_SASL, NS_STREAMS, NS_BIND, NS_SESSION, Protocol, is_result_node, JID
+from protocol import NS_SASL, NS_STREAMS, NS_BIND, NS_SESSION, Protocol, is_result_node, JID, NS_SESSION_TWO
 from simplexml import Node
 from dispatcher import Dispatcher
 
@@ -139,6 +139,15 @@ class Bind(Plugin):
             self.session = -1
         self.bound = []
 
+    def enable(self):
+        self.owner.send(Node('enable', attrs={'xmlns': NS_SESSION_TWO, 'resume': 'true'}))
+        self.owner.Dispatcher.register_handler('enabled', self.enable_handler, xmlns=NS_SESSION_TWO)
+        while not self.owner.process(1):
+            pass
+
+    def enable_handler(self, dis, stanza):
+        pass
+
     def bind(self, resource):
         while self.bound is None and self.owner.process(1):
             pass
@@ -151,7 +160,7 @@ class Bind(Plugin):
             jid = JID(res.get_tag('bind').get_tag_data('jid'))
             self.owner.user = jid.get_node()
             self.owner.resource = jid.get_resource()
-            Protocol('iq', tye='set', payload=[Node('session', attrs={'xmlns': NS_SESSION})])
+            self.enable()
             res = self.owner.Dispatcher.send_and_wait_for_response(Protocol('iq', tye='set',
                                                                             payload=[Node('session', attrs={'xmlns': NS_SESSION})]))
             if is_result_node(res):

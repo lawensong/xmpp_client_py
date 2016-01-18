@@ -1,8 +1,14 @@
 __author__ = 'Administrator'
+import time
 
 from transports import TcpSocket
 from dispatcher import Dispatcher
 from auth import SASL, Bind
+from protocol import NS_SESSION_TWO
+from simplexml import Node
+
+
+R_H = 1
 
 
 class Client:
@@ -55,7 +61,23 @@ class Client:
         else:
             print 'SASL error'
 
-    def get_response(self):
-        print "start to get response"
-        while self.process(1):
-            pass
+    def register_h(self):
+        self.register_handler('r', self.handler_a, xmlns=NS_SESSION_TWO)
+
+    def handler_a(self, dis, stanza):
+        global R_H
+        R_H += 1
+        _id = R_H
+        self.send(Node('a', attrs={'xmlns': NS_SESSION_TWO, 'h': _id}))
+
+    def register_message(self):
+        self.register_handler('message', self.handler_message)
+
+    def handler_message(self, dis, stanza):
+        print str(stanza.get_from())+": "+stanza.get_tag_data('body')
+
+    def get_response(self, func=None, text=""):
+        while True:
+            self.process(1)
+            # if func:
+            #     func(text)
